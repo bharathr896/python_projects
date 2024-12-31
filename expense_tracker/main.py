@@ -15,6 +15,7 @@ class ExpenseTracker(QWidget):
         # Expense data storage
         self.expenses = []
         self.file_name = "trans.csv"
+        self.categories = ["Food", "Transport", "Entertainment", "Utilities", "Others"]
 
         # Initialize UI components
         self.initUI()
@@ -42,7 +43,7 @@ class ExpenseTracker(QWidget):
         self.amount_input = QLineEdit(self)
         self.category_label = QLabel("Category:")
         self.category_input = QComboBox(self)
-        self.category_input.addItems(["Food", "Transport", "Entertainment", "Utilities", "Others"])
+        self.category_input.addItems(self.categories)
 
         self.date_label = QLabel("Date:")
         self.date_input = QDateEdit(self)
@@ -87,6 +88,7 @@ class ExpenseTracker(QWidget):
         amount_text = self.amount_input.text()
         category = self.category_input.currentText()
         date = self.date_input.date().toString("yyyy-MM-dd")
+        
 
         try:
             amount = float(amount_text)
@@ -116,7 +118,6 @@ class ExpenseTracker(QWidget):
             
             # Iterate through rows
             for row in reader:
-                print(row)  # Each row is a dictionary
                 expense_text = f"{row['Date']} - {row['Category']}: {float(row['Amount']):.2f}"
                 self.expense_list.addItem(expense_text)
 
@@ -125,17 +126,44 @@ class ExpenseTracker(QWidget):
         #    self.expense_list.addItem(expense_text)
 
     def view_summary(self):
-        if not self.expenses:
+        path_exists = os.path.exists(self.file_name)
+        if not path_exists:
             QMessageBox.warning(self, "No Data", "No expenses to summarize!")
             return
 
         summary = {}
-        for expense in self.expenses:
-            category = expense["category"]
-            summary[category] = summary.get(category, 0) + expense["amount"]
 
-        summary_text = "\n".join([f"{category}: ${total:.2f}" for category, total in summary.items()])
+        #df = pd.read_csv(self.file_name)
+        #grouped_data = df.groupby('Category')['Amount'].sum()
+        #summary_text = ""
+        #for category, value in grouped_data.items():
+        #    summary_text = summary_text + f"{category} : {value} \n"
+#
+        #QMessageBox.information(self, "Summary by Category", summary_text)
+
+        summary_text = self.get_date_summary()
         QMessageBox.information(self, "Summary by Category", summary_text)
+
+    def get_date_summary(self):
+        df = pd.read_csv(self.file_name)
+        df['Date']=pd.to_datetime(df['Date'])
+        date_grouped_data = df.groupby([df['Date'].dt.date,'Category'])['Amount'].sum()
+        print(date_grouped_data)
+        
+        summary_text = "Date\tCategory\tAmount\n"
+        for data,amount in date_grouped_data.items():
+            summary_text = summary_text + f"{str(data[0])} {data[1]} {amount}\n"
+            
+        return summary_text
+
+
+      
+
+    def get_monthly_summary(self):
+        pass
+
+    def get_yearly_summary(self):
+        pass
 
     def apply_theme(self):
         """Apply a monochromatic theme (shades of blue)"""
